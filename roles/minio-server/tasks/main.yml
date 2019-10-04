@@ -1,0 +1,50 @@
+---
+- name: create minio group
+  group:
+    name: minio
+    system: yes
+
+- name: create minio user
+  user:
+    name: minio
+    comment: "Minio server"
+    system: yes
+    group: minio
+    home: /srv/minio
+    shell: /usr/sbin/nologin
+
+- name: create minio data directory
+  file:
+    path: /srv/minio/data
+    state: directory
+    owner: minio
+    group: minio
+    mode: 0755
+
+- name: get minio binary
+  get_url:
+    url: https://dl.minio.io/server/minio/release/linux-amd64/minio
+    dest: /usr/local/sbin/minio
+    owner: root
+    group: root
+    mode: 0555
+
+- name: install supervisor
+  apt:
+    name: supervisor
+    state: present
+
+- name: supervisor configuration
+  copy:
+    src: supervisor.minio-server.conf
+    dest: /etc/supervisor/conf.d/minio-server.conf
+    owner: root
+    group: root
+    mode: 0444
+
+- name: restart supervisor
+  service:
+    name: supervisor
+    state: restarted
+    sleep: 2
+

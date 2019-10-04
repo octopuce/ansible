@@ -1,0 +1,52 @@
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    ipv4_master_addr: "{{ hostvars[groups['all'][0]]['ansible_default_ipv4']['address'] }}"
+
+  vars_files:
+    - "{{ var_file }}"
+
+  tasks:
+
+  - name: archive builds
+    command: rm -rf {{item}} 
+    delegate_to: localhost
+    run_once: true
+    with_items:
+    - /tmp/infra
+    - /tmp/infra.archive
+
+  - name: locally clone repo
+    run_once: true
+    git:
+      repo: "{{infra_git}}"
+      dest: /tmp/infra
+      version: HEAD
+      force: yes
+    delegate_to: localhost
+#    changed_when: false #
+  
+  - name: archive app repo
+    run_once: true
+    command: tar -C /tmp/infra -czf /tmp/infra.archive . 
+    args:
+    delegate_to: localhost
+#    changed_when: false
+  
+  - name: create /var/lib/infra
+    shell: if [ ! -d /var/lib/infra ] ; then  mkdir /var/lib/infra; fi
+
+  - name: unarchive app repo
+    unarchive:
+      src: /tmp/infra.archive
+      dest: /var/lib/infra
+      creates: /var/lib/infra/.git
+
+  - name : Create /infra symlink
+    shell: if [ ! -e /infra ] ; then  ln -s /var/lib/infra /infra; fi
+

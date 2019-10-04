@@ -1,0 +1,31 @@
+---
+- hosts: all
+
+  vars_files:
+    - "{{ var_file }}"
+
+  sudo: no
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    ipv4_master_addr: "{{ hostvars[groups['all'][0]]['ansible_default_ipv4']['address'] }}"
+
+  tasks:
+
+  - name: Install nvm for user "{{ nvm_user }}"
+    sudo: yes
+    sudo_user: "{{ nvm_user }}"
+    run_once: true
+    shell: NVM_DIR="$HOME/.nvm" && git clone https://github.com/creationix/nvm.git "$NVM_DIR" && cd "$NVM_DIR" && git checkout `git describe --abbrev=0 --tags --match "v[0-9]*" $(git rev-list --tags --max-count=1)` && \. "$NVM_DIR/nvm.sh"
+
+  - name: Update bashrc for nvm
+    sudo: yes
+    sudo_user: "{{ nvm_user }}"
+    lineinfile:
+      state: present
+      dest: ~/.bashrc
+      line: '\n## NVM ##\nexport NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm\n'
+      owner: "{{ nvm_user }}"
+

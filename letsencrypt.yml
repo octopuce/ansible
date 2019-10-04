@@ -1,0 +1,28 @@
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    ipv4_master_addr: "{{ hostvars[groups['all'][0]]['ansible_default_ipv4']['address'] }}"
+
+  vars_files:
+    - "{{ var_file }}"
+
+  tasks:
+
+
+  # Debian 
+  - name: ensure packages installed
+    apt: pkg={{ item }} state=latest
+    with_items: 
+    - certbot
+
+  # Infra
+  - name: Letsencrypt | Move node conf to infra
+    shell: "[ ! -h /etc/letsencrypt ] && [ -d /etc/letsencrypt ] && mv /etc/letsencrypt /infra/etc/{{cluster_name}}/"
+
+  - name: Letsencrypt | Link conf from /infra to /etc 
+    shell:  "[ ! -h /etc/letsencrypt ] && [ -d  /infra/etc/{{ cluster_name }}/letsencrypt ] && ln -s /infra/etc/{{ cluster_name }}/letsencrypt /etc/letsencrypt"

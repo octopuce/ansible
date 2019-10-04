@@ -1,0 +1,82 @@
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    master_hostname: "{{ hostvars[groups['all'][0]]['ansible_hostname'] }}"
+    ipv4_master_addr: "{{ hostvars[groups['all'][0]]['ansible_default_ipv4']['address'] }}"
+    play_hosts: "{{ groups['all'] }}"
+
+  vars_files:
+    - "{{ var_file }}"
+
+  tasks:
+
+  - name: Update apt
+    apt: update_cache=yes
+
+  - name: Ensure packages installed
+    apt: pkg={{ item }} state=latest
+    with_items:
+      - "heartbeat"
+
+  - name: Create infra dirs
+    command: mkdir -p {{ item }} 
+    with_items:
+        - /infra/etc/{{ cluster_name }}/heartbeat
+        - /var/log/heartbeat
+
+  - name: Create a unique ID
+    shell: dd if=/dev/urandom bs=512 count=1 2>/dev/null | sha1sum | awk '{print $1}' 
+    run_once: true
+    delegate_to: localhost 
+    register: authkey
+
+  - name: Create haresources 
+    template:
+        force: yes 
+        src: templates/heartbeat/haresources
+        dest: /infra/etc/{{ cluster_name }}/heartbeat/haresources
+        owner: root 
+        group: root
+        mode: 0600
+
+  - name: Create authkeys
+    template:
+        force: no 
+        src: templates/heartbeat/authkeys
+        dest: /infra/etc/{{ cluster_name }}/heartbeat/authkeys
+        owner: root 
+        group: root
+        mode: 0600
+
+  - name: Create ha.cf
+    template:
+        force: yes 
+        src: templates/heartbeat/ha.cf
+        dest: /infra/etc/{{ cluster_name }}/heartbeat/ha.cf
+        owner: root 
+        group: root
+        mode: 0600
+
+  - name : Remove node conf in /etc
+    command : rm -f /etc/heartbeat/{{item}} 
+    with_items:
+      - haresources
+      - ha.cf 
+      - authkeys
+
+  - name : Link node conf from infra 
+    command :  ln -s /infra/etc/{{ cluster_name }}/heartbeat/{{item}} /etc/heartbeat/{{item}} 
+    with_items:
+      - ha.cf 
+      - haresources
+      - authkeys
+
+  - name: reload service
+    shell: service {{ item }} reload
+    with_items:
+        - heartbeat

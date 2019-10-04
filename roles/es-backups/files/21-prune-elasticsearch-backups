@@ -1,0 +1,82 @@
+#!/usr/bin/python
+#
+# 2017-12-01 Arnaud Gomes
+# Prune ElasticSearch backups
+#   - older than 7 days,
+#   - while keeping at least 5 successful backups.
+
+import requests
+import json
+import datetime
+import sys
+
+DEBUG = False
+
+def debug(msg):
+    if DEBUG:
+        sys.stderr.write('DEBUG: %s\n' % msg)
+
+base_url = 'http://localhost:9200/_snapshot/es_backups'
+purge_days = 7
+keep_backups = 5
+
+req = requests.get(base_url + '/_all')
+# The reply contains a dictionary with only one key, 'snapshots', with a list as value.
+all_backups = json.loads(req.content)['snapshots']
+
+# Separate successful and unsuccessful backups.
+successes = list()
+failures = list()
+for backup in all_backups:
+    if backup['state'] == 'SUCCESS':
+        successes.append(backup)
+        debug('success ' + backup['snapshot'])
+    else:
+        failures.append(backup)
+        debug('failure ' + backup['snapshot'])
+
+# Keep all successful backups more recent than purge_days days.
+to_keep = list()
+today = datetime.date.today()
+for backup in successes[:]:
+    # Our snapshots are labeled 'snapshot_2017-06-19-17-26'.
+    backup_date = datetime.datetime.strptime(backup['snapshot'], 'snapshot_%Y-%m-%d-%H-%M').date()
+    if (today - backup_date).days <= purge_days:
+        debug('keeping ' + backup['snapshot'])
+        to_keep.append(backup)
+        successes.remove(backup)
+    else:
+        debug('not keeping ' + backup['snapshot'])
+
+# Add as many as needed to keep at least keep_backups.
+# First, sort our list of successes by name. We should sort by date, but our
+# naming scheme ensures we get the same result.
+successes.sort(key=lambda x: x['snapshot'])
+while len(to_keep) < keep_backups:
+    try:
+        most_recent = successes.pop()
+    except IndexError:
+        # Nothing left in list successes.
+        break
+    debug('adding older ' + most_recent['snapshot'])
+    to_keep.append(most_recent)
+
+# Add all failed backups more recent than purge_days days, just in case.
+for backup in failures[:]:
+    # Our snapshots are labeled 'snapshot_2017-06-19-17-26'.
+    backup_date = datetime.datetime.strptime(backup['snapshot'], 'snapshot_%Y-%m-%d-%H-%M').date()
+    if (today - backup_date).days <= purge_days:
+        debug('adding failed ' + backup['snapshot'])
+        to_keep.append(backup)
+        failures.remove(backup)
+
+# Delete the rest.
+for backup in successes + failures:
+    backup_name = backup['snapshot']
+    backup_url = base_url + '/' + backup_name
+    debug('sending DELETE to ' + backup_url)
+    res = requests.delete(backup_url)
+    debug('Status code: %s' % res.status_code)
+    debug('Response body: %s' % res.text)
+
+# EOF

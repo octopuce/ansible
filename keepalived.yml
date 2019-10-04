@@ -1,0 +1,55 @@
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    master_hostname: "{{ hostvars[groups['all'][0]]['ansible_hostname'] }}"
+    ipv4_master_addr: "{{ hostvars[groups['all'][0]]['ansible_default_ipv4']['address'] }}"
+    ipv4_backup_addr: "{{ hostvars[groups['all'][1]]['ansible_default_ipv4']['address'] }}"
+    play_hosts: "{{ groups['all'] }}"
+
+  vars_files:
+    - "{{ var_file }}"
+
+  tasks:
+
+  - name: Update apt
+    apt: update_cache=yes
+
+  - name: Ensure packages installed
+    apt: pkg={{ item }} state=latest
+    with_items:
+      - "keepalived"
+
+  - name: Create infra dirs
+    command: mkdir -p {{ item }} 
+    with_items:
+        - /infra/etc/{{ cluster_name }}/keepalived
+        - /var/log/keepalived
+
+  - name: Create conf file 
+    template:
+        force: yes 
+        src: templates/keepalived/keepalived.conf
+        dest: /infra/etc/{{ cluster_name }}/keepalived/keepalived.conf.{{ ansible_hostname }}
+        owner: root 
+        group: root
+        mode: 0600
+
+  - name : Remove node conf in /etc
+    command : rm -f /etc/keepalived/{{item}} 
+    with_items:
+      - keepalived.conf 
+
+  - name : Link node conf from infra 
+    command :  ln -s /infra/etc/{{ cluster_name }}/keepalived/{{item}}.{{ ansible_hostname }} /etc/keepalived/{{item}} 
+    with_items:
+      - keepalived.conf 
+
+  - name: reload service
+    shell: service {{ item }} reload
+    with_items:
+        - keepalived

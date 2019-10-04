@@ -1,0 +1,39 @@
+---
+- name: backup directory
+  file:
+    path: /var/backups/elasticsearch
+    state: directory
+    owner: elasticsearch
+    group: elasticsearch
+    mode: 0755
+
+- name: set up backup repo
+  uri:
+    url: http://localhost:9200/_snapshot/es_backups
+    method: PUT
+    body_format: json
+    body:
+      type: fs
+      settings:
+        compress: true
+        location: /var/backups/elasticsearch
+    dest: /etc/elasticsearch/backup_repo.log.json
+
+- name: backup configuration
+  copy:
+    src: backup_repo.json
+    dest: /etc/elasticsearch/backup_repo.json
+    owner: root
+    group: root
+    mode: 0444
+
+- name: backup scripts
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/backup.d/{{ item }}"
+    owner: root
+    group: root
+    mode: 0555
+  with_items:
+    - 20-backup-elasticsearch
+    - 21-prune-elasticsearch-backups

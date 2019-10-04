@@ -1,0 +1,104 @@
+# A single node mysql:mariadb installer 
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    mysql_master: "{{ hostvars[groups['all'][0]]['ansible_hostname'] }}"
+
+  vars_files:
+    - "{{ var_file }}"
+
+  tasks:
+
+
+  # Add packages & stop service for now
+
+  - name: -Mysql- ensure packages installed
+    apt: pkg={{ item }} state=latest
+    with_items:
+      - "mariadb-server"
+      - "mariadb-client"
+
+  - name: -Mysql- Stop service
+    command: service {{ item }} stop
+    with_items:
+        - mysql
+      
+  - name: -Mysql- Create infra dirs
+    command: mkdir -p {{ item }} 
+    with_items:
+        - /infra/etc/{{ cluster_name }}/mysql
+        - /infra/etc/{{ cluster_name }}/mysql/mariadb.conf.d
+        - /infra/etc/{{ cluster_name }}/network
+        - /infra/etc/{{ cluster_name }}/network/iptables-specific.d
+        - /etc/network/iptables-specific.d
+
+  # Start Mysql Configuration
+  - name: -Mysql- Check for mysql conf files info
+    stat: path=/infra/etc/{{ cluster_name }}/mysql/mariadb.conf.d/{{item.file}}
+    register: stat_result 
+    with_items:
+        - { name: 'clients', file: '99-clients.cnf',  }
+        - { name: 'logs', file: '99-logs.cnf',  }
+        - { name: 'performances', file: '99-performances.cnf',  }
+        - { name: 'replication', file: '99-replication.cnf',  }
+        - { name: 'server', file: '99-server.cnf',  }
+        - { name: 'serverid', file: '99-serverid.cnf',  }
+
+  - name: -Mysql- Create mysql config files 
+    template:
+        force: yes 
+        src: templates/mysql/{{item.item.file}}
+        dest: /infra/etc/{{ cluster_name }}/mysql/mariadb.conf.d/{{item.item.file}}
+        owner: root 
+        group: root
+        mode: 0600
+    when: not item.stat.exists
+    with_items: "{{ stat_result.results }}"
+        
+  - name: -Mysql- symlink conf files
+    command: ln -s  /infra/etc/{{ cluster_name }}/mysql/mariadb.conf.d/{{item.item.file}} /etc/mysql/mariadb.conf.d/{{item.item.file}}
+    when: not item.stat.exists
+    with_items: "{{ stat_result.results }}"
+   
+  # End Mysql configuration
+      
+  # Start Iptables configuration
+  - name: -Mysql- Check for iptables files info
+    stat: path={{item.src}}
+    register: stat_result
+    with_items:
+        - { name: 'iptables_specific', tmpl: 'files/iptables-specific',src: '/infra/etc/{{ cluster_name }}/network/iptables-specific', dest: '/etc/network/iptables-specific' }
+        - { name: 'iptables_mysql', tmpl: 'templates/iptables.mysql.conf',src: '/infra/etc/{{ cluster_name }}/network/iptables-specific.d/mysql.conf', dest: '/etc/network/iptables-specific.d/mysql.conf' }
+
+        
+  - name: -Mysql- Create Firewall file from template
+    template:
+        src: "{{ item.item.tmpl }}"
+        dest: "{{ item.item.src }}"
+        owner: root
+        group: root 
+        mode: 0755
+    when: not item.stat.exists
+    with_items: "{{ stat_result.results }}"
+        
+  - name: -Mysql- symlink iptables-specific files
+    command: ln -s {{ item.item.src }} {{ item.item.dest }} 
+    when: not item.stat.exists
+    with_items: "{{ stat_result.results }}"
+   
+
+  - name: -Mysql- Reload Firewall
+    command: /etc/network/iptables_on.sh
+
+  # EndIptables configuration
+       
+  # Restart service
+  - name: -Mysql- Start services
+    command: service {{ item }} start
+    with_items:
+        - mysql

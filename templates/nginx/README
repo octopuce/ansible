@@ -1,0 +1,10 @@
+
+These are various nginx/sites-available/<type>.conf
+configuration templates
+as of now, you should deploy them manually depending on the kind of website you want to host.
+
+
+TODO : proxy +
+proxy_ssl_server_name
+si ssl
+

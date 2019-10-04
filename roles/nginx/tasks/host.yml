@@ -1,0 +1,33 @@
+---
+
+- name: "[DEBUG] host var"
+  debug:
+    msg: "host = {{ host }}"
+
+- name: "Generate basic templates for args provided"
+  template:
+    src: host.conf
+    dest: "/etc/nginx/sites-available/{{ host.name }}.{{ domain.name }}.conf"
+  notify:
+    - restart nginx
+
+- name: "enable host if is valid"
+  when: host.valid == True
+  file:
+    src: "/etc/nginx/sites-available/{{ host.name }}.{{ domain.name }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ host.name }}.{{ domain.name }}.conf"
+    owner: root
+    group: root
+    force: true
+    state: link
+  notify:
+    - restart nginx
+    
+- name: "Generate certs if asked to"
+  when: host.generate_certs == True
+  include_tasks: certs.yml
+  vars:
+    fqdn: "{{ host }}"
+  notify:
+    - restart nginx
+    

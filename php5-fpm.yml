@@ -1,0 +1,59 @@
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    ipv4_master_addr: "{{ hostvars[groups['all'][0]]['ansible_default_ipv4']['address'] }}"
+
+  vars_files:
+    - "{{ var_file }}"
+
+  tasks:
+
+  - name: update apt
+    apt: update_cache=yes
+
+  - name: ensure packages installed
+    apt: pkg={{ item }} state=latest
+    with_items: 
+    - php-apcu
+    - php-igbinary
+    - php-imagick
+    - php-memcached
+    - php-mongodb
+    - php-msgpack
+    - php-ssh2
+#- php5-apcu
+    - php5-cli
+    - php5-common
+    - php5-curl
+    - php5-fpm
+    - php5-gd
+    - php5-igbinary
+#- php5-imagick
+    - php5-intl
+    - php5-json
+    - php5-ldap
+    - php5-memcache
+    - php5-memcached
+    - php5-mongo
+    - php5-msgpack
+    - php5-mysqlnd
+    - php5-readline
+    - php5-ssh2
+    - php5-xsl
+
+  - name: Create infra dirs
+    command: mkdir -p /infra/etc/{{cluster_name}}/php5
+
+  - name : Remove node conf in /etc
+    shell: [ ! -h /etc/php5 ]  && mv /etc/php5 /infra/etc/{{cluster_name}}/
+
+  - name : move node conf to infra 
+    shell:  [ ! -h /etc/php5 ] && ln -s /infra/etc/{{ cluster_name }}/php5 /etc/php5
+
+  - name: restart services
+    command: service php5-fpm restart

@@ -1,0 +1,98 @@
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    ipv4_master_addr: "{{ hostvars[groups['all'][0]]['ansible_default_ipv4']['address'] }}"
+
+  vars_files:
+    - "{{ var_file }}"
+
+  tasks:
+
+  - name: update apt
+    apt: update_cache=yes
+
+  - name: ensure packages installed
+    apt: pkg={{ item }} state=latest
+    with_items: 
+        - php-apcu
+        - php-apcu-bc
+        - php-igbinary
+        - php-imagick
+        - php-memcached
+        - php-mongodb
+        - php-msgpack
+        - php-ssh2
+        - php5.6-cli
+        - php5.6-common
+        - php5.6-curl
+        - php5.6-fpm
+        - php5.6-gd
+        - php5.6-intl
+        - php5.6-json
+        - php5.6-ldap
+        - php5.6-mbstring
+        - php5.6-mysql
+        - php5.6-opcache
+        - php5.6-readline
+        - php5.6-xml
+        - php5.6-xsl
+        - php7.0-cli
+        - php7.0-common
+        - php7.0-curl
+        - php7.0-fpm
+        - php7.0-gd
+        - php7.0-intl
+        - php7.0-json
+        - php7.0-ldap
+        - php7.0-mbstring
+        - php7.0-mysql
+        - php7.0-opcache
+        - php7.0-readline
+        - php7.0-xml
+        - php7.0-xsl
+        - php7.1-cli
+        - php7.1-common
+        - php7.1-curl
+        - php7.1-fpm
+        - php7.1-gd
+        - php7.1-intl
+        - php7.1-json
+        - php7.1-ldap
+        - php7.1-mbstring
+        - php7.1-mysql
+        - php7.1-opcache
+        - php7.1-readline
+        - php7.1-xml
+        - php7.1-xsl
+        - php7.2-cli
+        - php7.2-common
+        - php7.2-curl
+        - php7.2-fpm
+        - php7.2-gd
+        - php7.2-intl
+        - php7.2-json
+        - php7.2-ldap
+        - php7.2-mbstring
+        - php7.2-mysql
+        - php7.2-opcache
+        - php7.2-readline
+        - php7.2-xml
+        - php7.2-xsl
+        
+
+  - name: Create infra dirs
+    command: mkdir -p /infra/etc/{{cluster_name}}/php
+
+  - name : Remove node conf in /etc
+    command : mv /etc/php/7.2 /infra/etc/{{cluster_name}}/php
+
+  - name : move node conf to infra 
+    command :  ln -s /infra/etc/{{ cluster_name }}/php/7.2 /etc/php/7.2
+
+  - name: restart services
+    command: service php7.2-fpm restart

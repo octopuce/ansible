@@ -1,0 +1,111 @@
+# based on https://everythingshouldbevirtual.com/ansible-rabbitmq-cluster/
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    rabbitmq_master: "{{ hostvars[groups['all'][0]]['ansible_hostname'] }}"
+
+  vars_files:
+    - "{{ var_file }}"
+
+  tasks:
+
+  - name: update apt
+    apt: update_cache=yes
+
+  - name: ensure packages installed
+    apt: pkg={{ item }} state=latest
+    with_items:
+      - "rabbitmq-server"
+
+  - name: Stop service
+    command: service {{ item }} stop
+    with_items:
+        - rabbitmq-server
+
+  - name: Create infra dirs
+    command: mkdir -p {{ item }} 
+    with_items:
+        - /infra/etc/{{ cluster_name }}/rabbitmq
+
+  - name: Remove cookie 
+    command: rm -f /var/lib/rabbitmq/.erlang.cookie 
+
+  - name: Generate erlang cookie
+    template: src=rabbitmq/erlang.cookie.j2 dest=/var/lib/rabbitmq/.erlang.cookie owner=rabbitmq group=rabbitmq mode=0400 backup=yes
+    template:
+        src: templates/rabbitmq/erlang.cookie.j2
+        dest: /infra/etc/{{cluster_name}}/rabbitmq/erlang.cookie.j2
+        owner: rabbitmq
+        group: rabbitmq
+        mode: 0400
+
+  - name : Remove node conf in /etc
+    command : rm -f /etc/rabbitmq/{{item}} 
+    with_items:
+      - rabbitmq.config 
+
+  - name: symlink iptables-specific files
+    command: ln -s {{ item.src }} {{ item.dest }} 
+    with_items:
+        - { src: '/infra/etc/{{ cluster_name }}/rabbitmq/erlang.cookie.j2', dest: '/var/lib/rabbitmq/.erlang.cookie' }
+        - { src: '/infra/etc/{{ cluster_name }}/rabbitmq/rabbitmq.config', dest: '/etc/rabbitmq/rabbitmq.config' }
+#
+#- name: rabbitmq_clustering | stopping rabbitmq app
+#  command: rabbitmqctl stop_app
+#
+#- name: rabbitmq_clustering | resetting rabbitmq app
+#  command: rabbitmqctl reset
+#
+#- name: rabbitmq_clustering | stopping rabbitmq-server
+#  service: name=rabbitmq-server state=stopped
+#
+#- name: rabbitmq_clustering | copy erlang cookie
+#  template: src=erlang.cookie.j2 dest=/var/lib/rabbitmq/.erlang.cookie owner=rabbitmq group=rabbitmq mode=0400 backup=yes
+#
+#- name: rabbitmq_clustering | restarting rabbitmq-server on master
+#  service: name=rabbitmq-server state=restarted
+#  when: inventory_hostname == "{{ rabbitmq_master }}"
+#
+#- name: rabbitmq_clustering | starting rabbitmq app on master
+#  command: rabbitmqctl start_app
+#  register: cluster_master
+#  when: inventory_hostname == "{{ rabbitmq_master }}"
+#
+#- name: rabbitmq_clustering | sending sigterm to any running rabbitmq processes
+#  shell: pkill -u rabbitmq || true
+#  when: inventory_hostname != "{{ rabbitmq_master }}"
+#
+#- name: rabbitmq_clustering | restarting rabbitmq-server
+#  service: name=rabbitmq-server state=restarted
+#  when: inventory_hostname != "{{ rabbitmq_master }}"
+#
+#- name: rabbitmq_clustering | stopping rabbitmq app
+#  command: rabbitmqctl stop_app
+#  when: inventory_hostname != "{{ rabbitmq_master }}"
+#
+#- name: rabbitmq_clustering | resetting rabbitmq app
+#  command: rabbitmqctl reset
+#  when: inventory_hostname != "{{ rabbitmq_master }}"
+#
+#- name: rabbitmq_clustering | joining rabbitmq cluster
+#  command: rabbitmqctl join_cluster 'rabbit@{{ rabbitmq_master }}'
+#  register: cluster_joined
+#  when: inventory_hostname != "{{ rabbitmq_master }}"
+#
+#- name: rabbitmq_clustering | starting rabbitmq app
+#  command: rabbitmqctl start_app
+#  when: inventory_hostname != "{{ rabbitmq_master }}"
+#
+#- name: rabbitmq_clustering | marking as clustered
+#  file: path=/etc/rabbitmq/clustered state=touch
+#  when: cluster_master.changed or cluster_joined.changed
+#
+  - name: Start services
+    command: service {{ item }} start
+    with_items:
+        - rabbitmq-server

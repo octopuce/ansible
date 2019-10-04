@@ -1,0 +1,53 @@
+---
+
+- name: 'Ensure required packages are installed cf: https://docs.ansible.com/ansible/latest/modules/mysql_replication_module.html'
+  apt:
+    name: 'python-pymysql'
+    state: latest
+
+- name: "Create Replication User"
+  mysql_user:
+    name: "{{ replication.user }}"
+    password: "{{ replication.password }}"
+    priv: "*.*:REPLICATION CLIENT"
+    state: present
+
+- name: "print default host"
+  debug:
+    var: ansible_default_ipv4.address
+
+- name: 'Set up template server-id for node1'
+  when: ansible_default_ipv4.address == node1.host
+  vars:
+    serverid: "{{ node1.serverid }}"
+  template:
+    src: 99_server-id.cnf
+    dest: /etc/mysql/conf.d/99_server-id.cnf
+
+- name: 'Set up template server-id for node2'
+  when: ansible_default_ipv4.address == node2.host
+  vars:
+    serverid: "{{ node2.serverid }}"
+  template:
+    src: 99_server-id.cnf
+    dest: /etc/mysql/conf.d/99_server-id.cnf
+
+- name: 'Template replication settings'
+  template:
+    src: 98_replication.cnf
+    dest: /etc/mysql/conf.d/98_replication.cnf
+
+- name: 'Set up replication settings for node1'
+  when: ansible_default_ipv4.address == node1.host
+  mysql_replication:
+    master_host: "{{ node2.host }}"
+    master_password: "{{ replication.password }}"
+    master_user: "{{ replication.user }}"
+
+- name: 'Set up replication settings for node2'
+  when: ansible_default_ipv4.address == node2.host
+  mysql_replication:
+    master_host: "{{ node1.host }}"
+    master_password: "{{ replication.password }}"
+    master_user: "{{ replication.user }}"
+

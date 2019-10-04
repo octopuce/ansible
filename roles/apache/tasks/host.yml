@@ -1,0 +1,27 @@
+---
+
+- name: "Generate basic templates for args provided"
+  template:
+    src: host.conf
+    dest: "/etc/apache2/sites-available/{{ host.name }}.{{ domain.name }}.conf"
+  notify:
+    - restart apache2
+
+- name: "Create root directory"
+  file:
+    dest: "{{ host.root }}"
+    owner: www-data
+    group: www-data
+    state: directory
+
+- name: "enable host if is valid"
+  when: host.valid == True
+  file:
+    src: "/etc/apache2/sites-available/{{ host.name }}.{{ domain.name }}.conf"
+    dest: "/etc/apache2/sites-enabled/{{ host.name }}.{{ domain.name }}.conf"
+    owner: root
+    group: root
+    force: true
+    state: link
+  notify:
+    - restart apache2

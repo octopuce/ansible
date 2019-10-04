@@ -1,0 +1,34 @@
+# Fichier log de débugage
+debugfile /var/log/heartbeat/debug.log
+
+# Fichier log
+logfile /var/log/heartbeat/heartbeat.log
+
+# Temps en seconde entre chaque battement de coeur
+keepalive       2
+
+# Au bout de <deadtime> secondes sans battement de coeur, la machine est considérée comme morte
+# Si c'est le maître, les services seront basculé vers l'esclave.
+deadtime        10
+
+# Au bout de <warntime> secondes sans battement de coeur
+# une alerte sera générée dans les logs
+warntime            7
+
+#Lors du crash du maitre, les ressources sont basculées vers l'esclave.
+#Ce paramètre mis sur "on" demande de renvoyer les ressources sur le maitre dès sa réapparition.
+#Sur "off" les ressources reste sur l'esclave malgré la réaparition du maître.
+#PS: Sur off, dans le cas ou l'esclave tombe en panne, le maitre en standby reprendra les ressources.
+auto_failback   off
+
+# Augmentation de <initdead> secondes en cas de redémarrage de la machine
+initdead           90
+
+# Le nom de chaque serveur obtenu avec uname -n
+{% for host in groups['all'] %}
+node {{ hostvars[host]['ansible_hostname'] }}
+ucast {{ hostvars[host]['ansible_default_ipv4']['interface'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}
+{% endfor %}
+
+# Par défaut, on utilise ubal comme tie-breaker.
+ping ubal

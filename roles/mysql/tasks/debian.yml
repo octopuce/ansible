@@ -1,0 +1,6 @@
+
+- name: Mysql | installing
+  apt: name= state=present
+  with_items:
+    - mysql-server
+    - mysql-client

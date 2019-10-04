@@ -1,0 +1,7 @@
+cluster.name: {{ cluster_name }}
+node.name: {{ ansible_hostname }} 
+network.host: {{ ansible_default_ipv4.address }}
+path.logs: /var/log/elasticsearch
+discovery.zen.ping.unicast.hosts: ["{{ main_nodes_iparr }}"]                          
+http.cors.enabled: true
+http.cors.allow-origin: /https?:\/\/.*(:[0-9]+)?/

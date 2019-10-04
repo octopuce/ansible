@@ -1,0 +1,51 @@
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    ipv4_master_addr: "{{ hostvars[groups['all'][0]]['ansible_default_ipv4']['address'] }}"
+
+  vars_files:
+    - "{{ var_file }}"
+
+  tasks:
+
+  - name: update apt
+    apt: update_cache=yes
+
+  - name: ensure packages installed
+    apt: pkg={{ item }} state=latest
+    with_items:
+      - "nginx-full"
+
+  - name: Create infra dirs
+    command: mkdir -p {{ item }} 
+    with_items:
+        - /infra/etc/{{ cluster_name }}/nginx
+
+  - name: create nginx.conf
+    template:
+        force: yes 
+        src: templates/nginx.conf
+        dest: /infra/etc/{{ cluster_name }}/nginx/nginx.conf
+        owner: root 
+        group: root
+        mode: 0644
+
+  - name : Remove node conf in /etc
+    command : rm -f /etc/nginx/{{item}} 
+    with_items:
+      - nginx.conf 
+
+  - name : move node conf to infra 
+    command :  ln -s /infra/etc/{{ cluster_name }}/nginx/{{item}} /etc/nginx/{{item}} 
+    with_items:
+      - nginx.conf 
+
+  - name: restart services
+    command: service {{ item }} restart
+    with_items:
+        - nginx

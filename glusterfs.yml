@@ -1,0 +1,99 @@
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    ipv4_master_addr: "{{ hostvars[groups['all'][0]]['ansible_default_ipv4']['address'] }}"
+
+  vars_files:
+    - "{{ var_file }}"
+
+  tasks:
+
+  - name: update apt
+    apt: update_cache=yes
+
+  - name: ensure packages installed
+    apt: pkg={{ item }} state=latest
+    with_items:
+      - glusterfs-server 
+      - glusterfs-client 
+      - glusterfs-common
+
+  - name: Create dirs
+    command: mkdir -p {{ item }} 
+    with_items:
+        - /infra/etc/{{ cluster_name }}/glusterfs
+        - /gluster
+        - /infra/etc/{{ cluster_name }}/network/iptables-specific.d
+        - /etc/network/iptables-specific.d
+        - /var/www/shared-fs
+
+  - name: remove existing iptables files
+    file: path={{ item.dest }} state=absent
+    with_items:
+        - { src: '/infra/etc/{{ cluster_name }}/network/iptables-specific.d/glusterfs.conf', dest: '/etc/network/iptables-specific.d/glusterfs.conf' }
+
+  - name: symlink iptables-specific files
+    command: ln -s {{ item.src }} {{ item.dest }} 
+    with_items:
+        - { src: '/infra/etc/{{ cluster_name }}/network/iptables-specific.d/glusterfs.conf', dest: '/etc/network/iptables-specific.d/glusterfs.conf' }
+
+  - name: Create Firewall file
+    template:
+        src: templates/iptables.glusterfs.conf
+        dest: /infra/etc/{{cluster_name}}/network/iptables-specific.d/glusterfs.conf
+        owner: root
+        group: root 
+        mode: 0700
+
+  - name: Reload Firewall
+    command: /etc/network/iptables_on.sh
+
+  - name: create glusterd.vol
+    template:
+        force: yes 
+        src: templates/glusterd.vol
+        dest: /infra/etc/{{ cluster_name }}/glusterfs/glusterd.vol.{{ansible_hostname}}
+        owner: root 
+        group: root
+        mode: 0644
+
+  - name : Remove node conf in /etc
+    command : rm -f /etc/glusterfs/{{item}} 
+    with_items:
+      - glusterd.vol 
+
+  - name : move node conf to infra 
+    command :  ln -s /infra/etc/{{ cluster_name }}/glusterfs/{{item}}.{{ansible_hostname}} /etc/glusterfs/{{item}} 
+    with_items:
+      - glusterd.vol 
+
+  - name: add logging to init.d 
+    lineinfile:
+        dest: /etc/init.d/glusterfs-server
+        state: present
+        regexp: 'GLUSTERD_OPTS=".*"'
+        line: 'GLUSTERD_OPTS="--log-level DEBUG"'
+        insertbefore: 'LOG_LEVEL="DEBUG"'
+
+  - name: restart services
+    command: service {{ item }} restart
+    with_items:
+        - glusterfs-server
+
+  - name: add to fstab 
+    lineinfile:
+        dest: /etc/fstab
+        state: present
+        regexp: '/var/www/shared-fs'
+        line: '{{ansible_default_ipv4.address}}:/shared-fs /var/www/shared-fs glusterfs defaults,_netdev,acl 0 0'
+
+  - name: mount volume 
+    command: service {{ item }} restart
+    with_items:
+        - glusterfs-server
+

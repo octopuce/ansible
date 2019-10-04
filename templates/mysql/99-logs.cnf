@@ -1,0 +1,12 @@
+[mysqld]
+
+general_log			                         = 0                                               
+general_log_file		                     = /var/log/mysql/mysql.log
+log-queries-not-using-indexes
+log_error			                         = /var/log/mysql/error.log
+log_slow_rate_limit		                     = 1000
+log_slow_verbosity		                     = query_plan
+log_warnings			                     = 4
+long_query_time			                     = 5
+slow_query_log                               = 1
+slow_query_log_file		                     = /var/log/mysql/mysql-slow.log

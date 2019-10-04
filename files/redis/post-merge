@@ -1,0 +1,5 @@
+#!/bin/sh
+#
+echo "Running post merge git hook"
+chown redis: /infra/etc/*/redis/*
+

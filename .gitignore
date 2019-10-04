@@ -1,0 +1,7 @@
+hosts
+/nbproject
+hosts.d/
+vars.d/
+*.retry
+.*.swp
+vars.yml

@@ -1,0 +1,16 @@
+[mysqld]
+log_bin                 = /var/log/mysql/mysql-bin.log
+expire_logs_days        = 5
+max_binlog_size         = 100M
+log-slave-updates
+binlog_format           = MIXED
+
+slave_sql_verify_checksum = 0
+
+{% for do_db in do_dbs %}
+replicate-do-db={{ do_db }}
+{% endfor %}
+
+{% for do_NOT_db in do_NOT_dbs %}
+replicate-ignore-db={{ do_NOT_db }}
+{% endfor %}

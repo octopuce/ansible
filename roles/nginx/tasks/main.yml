@@ -1,0 +1,50 @@
+---
+
+#- name: "Install nginx package" 
+#  apt:
+#    name: nginx
+#    state: latest
+#    install_recommends: no
+
+- name: "Generate default nginx conf"
+  file:
+    src: nginx.conf
+    dest: "/etc/nginx/"
+  notify:
+    - restart nginx
+
+- name: "Generate domain level template"
+  template:
+    src: domain.conf
+    dest: "/etc/nginx/sites-available/{{ domain.name }}.conf"
+  notify:
+    - restart nginx
+
+- name: "enable domain if is valid"
+  when: domain.valid == True
+  file:
+    src: "/etc/nginx/sites-available/{{ domain.name }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ domain.name }}.conf"
+    owner: root
+    group: root
+    force: true
+    state: link
+  notify:
+    - restart nginx
+    
+- name: "Generate certs if asked to"
+  when: domain.generate_certs == True
+  include_tasks: certs.yml
+  vars:
+    fqdn: "{{ domain }}"
+  notify:
+    - restart nginx
+    
+- name: "include simple host task"
+  include_tasks: host.yml
+  loop: "{{ domain.hostnames }}"
+  vars:
+    host: "{{ item }}"
+  notify:
+    - restart nginx
+

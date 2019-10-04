@@ -1,0 +1,108 @@
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+
+  vars:
+    main_nodes_ips: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(' ')}}"
+    main_nodes_ipc: "{% set IP_ARR=[] %}{% for host in groups['all'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['ansible_default_ipv4']['address']) %}{% endif %}{% endfor %}{{IP_ARR|join(',')}}"
+    ipv4_master_addr: "{{ hostvars[groups['all'][0]]['ansible_default_ipv4']['address'] }}"
+
+  vars_files:
+    - "{{ var_file }}"
+
+  tasks:
+
+  - name: update apt
+    apt: update_cache=yes
+
+  - name: ensure packages installed
+    apt: pkg={{ item }} state=latest
+    with_items:
+      - "redis-server"
+      - "redis-sentinel"
+
+  - name: Create infra dirs
+    command: mkdir -p {{ item }} 
+    with_items:
+        - /infra/etc/{{ cluster_name }}/redis
+        - /infra/etc/{{ cluster_name }}/network/iptables-specific.d
+        - /etc/network/iptables-specific.d
+
+  - name: Deploy iptables-specific
+    copy:
+        src: files/iptables-specific
+        dest: /infra/etc/{{ cluster_name }}/network/iptables-specific
+        owner: root 
+        group: root
+        mode: 0700
+
+  - name: remove existing iptables files
+    file: path={{ item.dest }} state=absent
+    with_items:
+        - { src: '/infra/etc/{{ cluster_name }}/network/iptables-specific', dest: '/etc/network/iptables-specific' }
+        - { src: '/infra/etc/{{ cluster_name }}/network/iptables-specific.d/redis.conf', dest: '/etc/network/iptables-specific.d/redis.conf' }
+
+  - name: symlink iptables-specific files
+    command: ln -s {{ item.src }} {{ item.dest }} 
+    with_items:
+        - { src: '/infra/etc/{{ cluster_name }}/network/iptables-specific', dest: '/etc/network/iptables-specific' }
+        - { src: '/infra/etc/{{ cluster_name }}/network/iptables-specific.d/redis.conf', dest: '/etc/network/iptables-specific.d/redis.conf' }
+
+  - name: Create Firewall file
+    template:
+        src: templates/iptables.redis.conf
+        dest: /infra/etc/{{cluster_name}}/network/iptables-specific.d/redis.conf
+        owner: root
+        group: root 
+        mode: 0700
+
+  - name: Reload Firewall
+    command: /etc/network/iptables_on.sh
+
+  - name: create sentinel.conf
+    template:
+        force: no
+        src: templates/sentinel.conf
+        dest:  /infra/etc/{{ cluster_name }}/redis/sentinel.conf.{{ansible_hostname}}
+        owner: redis
+        group: redis
+        mode: 0644 
+
+  - name: create redis.conf
+    template:
+        force: no
+        src: templates/redis.conf
+        dest: /infra/etc/{{ cluster_name }}/redis/redis.conf.{{ansible_hostname}}
+        owner: redis
+        group: redis
+        mode: 0644
+
+  - name : Remove node conf in /etc
+    command : rm -f /etc/redis/{{item}} 
+    with_items:
+      - sentinel.conf
+      - redis.conf 
+
+  - name : move node conf to infra 
+    command :  ln -s /infra/etc/{{ cluster_name }}/redis/{{item}}.{{ansible_hostname}} /etc/redis/{{item}} 
+    with_items:
+      - sentinel.conf
+      - redis.conf 
+
+  - name: restart services
+    command: service {{ item }} restart
+    with_items:
+        - redis-sentinel
+        - redis-server
+
+  - name: add git hooks  
+    copy:
+        src: "files/redis/{{ item }}"
+        dest: "/infra/.git/hooks/{{ item }}"
+        owner: root
+        group: root
+        mode: 0700
+    with_items:
+        - post-merge
+        - post-checkout

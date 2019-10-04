@@ -1,0 +1,17 @@
+---
+
+- name: "Generate ports apache conf"
+  template:
+    src: ports.conf
+    dest: "/etc/apache2/"
+  notify:
+    - restart apache2
+
+- name: "include simple host task"
+  include_tasks: host.yml
+  loop: "{{ domain.hostnames }}"
+  vars:
+    host: "{{ item }}"
+  notify:
+    - restart apache2
+
