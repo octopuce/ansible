@@ -38,7 +38,6 @@ Executer la commande du chapiter "### Run".
 
 ## Usage 
 
-* You MUST run this on UBAL for Puppet dependant actions to work !!!
 * You MUST build a host file containing an IP per host 
 * You MUST build a vars file containing the variables required by the ansible playbooks
 * Run `ansible-playbook -i /infra/INFRA/ansible/prod.host -e "var_file=/infra/INFRA/ansible/vars.yml" PLAYBOOK.yml`
