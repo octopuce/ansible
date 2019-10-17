@@ -1,5 +1,7 @@
 # Ansible playbooks for new infrastructures
 
+# outdated
+
 ## Quick use
 ### Run
 Si tous les fichiers de configuration sont déjà renseignés, éditer les 3 premières variables des la commande suivante et l'executer
