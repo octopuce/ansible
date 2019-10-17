@@ -4,7 +4,7 @@
 
 ## Quick use
 ### Run
-Si tous les fichiers de configuration sont déjà renseignés, éditer les 3 premières variables des la commande suivante et l'executer
+Si tous les fichiers de configuration sont déjà renseignés, éditer les 3 premières variables des la commande suivante et l'éxecuter
 ```
 client='' && cluster='' && myplaybook='' && cd /usr/local/share/ansible/ && ansible-playbook  -i /infra/$client/ansible/$cluster/hosts -e var_file=/infra/$client/ansible/$cluster/vars.yml $myplaybook.yml
 ```
