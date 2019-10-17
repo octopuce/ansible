@@ -32,7 +32,7 @@ vim /infra/$client/ansible/$cluster/vars.yml
 `̀``
 Executer la commande du chapiter "### Run".
 
-### NOOP
+### NOOP, DRY RUN
 --check
 
 ### Debug
