@@ -1,0 +1,30 @@
+---
+
+- name: "Install Keepalived"
+  apt:
+    name: keepalived
+    state: latest
+
+- name: "print default host"
+  debug:
+    var: ansible_default_ipv4.address
+
+- name: "copy default daemon keepalived"
+  copy:
+    src: daemon_keepalived.conf
+    dest: /etc/default/keepalived
+
+- name: "copy basic keepalived.conf"
+  blockinfile:
+    dest: /etc/keepalived/keepalived.conf
+    block: "{{ lookup('file', 'basic_keepalived.conf') }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+
+- name: "include simple VIP task"
+  include_tasks: vip.yml
+  loop: "{{ ips }}"
+  vars:
+    ip: "{{ item }}"
+    random_id: "{{ 100 | random }}"
+
+

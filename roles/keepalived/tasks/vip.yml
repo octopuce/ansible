@@ -1,0 +1,16 @@
+---
+
+- name: "template keepalived.conf for master"
+  when: ansible_default_ipv4.address == ip.master
+  blockinfile:
+    dest: /etc/keepalived/keepalived.conf
+    block: "{{ lookup('template', 'keepalived_master.conf') }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK FOR {{ ip.name }}"
+
+- name: "template keepalived.conf for slave"
+  when: ansible_default_ipv4.address == ip.slave
+  blockinfile:
+    dest: /etc/keepalived/keepalived.conf
+    block: "{{ lookup('template', 'keepalived_slave.conf') }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK FOR {{ ip.name }}"
+
