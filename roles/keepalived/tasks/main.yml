@@ -16,6 +16,7 @@
 
 - name: "copy basic keepalived.conf"
   blockinfile:
+    create: yes
     dest: /etc/keepalived/keepalived.conf
     block: "{{ lookup('file', 'basic_keepalived.conf') }}"
     marker: "# {mark} ANSIBLE MANAGED BLOCK"

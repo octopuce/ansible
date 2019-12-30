@@ -11,7 +11,8 @@
   will loop for each ip in ips:
   ips:
     name: [string] le nom de la VIP
-    timeout: [int] le temps de down que keepalived accepte avant de basculer la VIP
+    interface: [string] l'interface pour la VIP ( attention, sera la même pour la source du ping )
+    timeout: [int] le temps ( secondes ) de down que keepalived accepte avant de basculer la VIP
     vip: [string] la vip (cidr v4 ou v6)
     master: [string] l'ip du master (v4 ou v6)
     slave: [string] l'ip du master (v4 ou v6)
