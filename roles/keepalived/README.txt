@@ -10,6 +10,7 @@
 
   will loop for each ip in ips:
   ips:
+    id: [int] 0 < id < 100
     name: [string] le nom de la VIP
     interface: [string] l'interface pour la VIP ( attention, sera la même pour la source du ping )
     timeout: [int] le temps ( secondes ) de down que keepalived accepte avant de basculer la VIP

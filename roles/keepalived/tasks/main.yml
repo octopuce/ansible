@@ -26,6 +26,3 @@
   loop: "{{ ips }}"
   vars:
     ip: "{{ item }}"
-    random_id: "{{ 100 | random }}"
-
-
