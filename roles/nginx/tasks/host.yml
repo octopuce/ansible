@@ -11,6 +11,20 @@
   notify:
     - restart nginx
 
+- name: "Create directory to serve static files"
+  file:
+    owner: www-data
+    group: www-data
+    path: "/var/www/{{ host.name }}"
+    state: directory
+
+- name: "Add default file"
+  copy:
+    owner: www-data
+    group: www-data
+    src: "index.html"
+    dest: "/var/www/{{ host.name }}/index.html"
+
 - name: "enable host if is valid"
   when: host.valid == True
   file:
