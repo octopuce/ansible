@@ -1,0 +1,19 @@
+# Get shell users and store the list in your /tmp/ShellUsers-{{ date }}
+---
+- hosts: all
+
+  vars:
+      date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
+
+  gather_facts: no
+
+  tasks:
+      - name: List Users
+        shell: |
+         users=$(grep -E '/bin/(sh|bash|ksh)' /etc/passwd|grep -v root |
+         awk -F ":" -v d="$(hostname)" '{ print d" "$1"\n"}');
+         if [ -z "$users" ]; then echo -e "\n$(hostname) NO-SHELL-USERS\n"; else echo -e "$users\n" |sort ; fi 
+        register: out
+      - local_action: copy content={{ out.stdout }} dest=/tmp/ShellUsers-{{ date }}-{{ inventory_hostname }}
+      - local_action: shell cat /tmp/ShellUsers-{{ date }}-*|sed '/^$/d'|sort > /tmp/ShellUsers-{{ date }}
+      - local_action: shell rm -f /tmp/ShellUsers-{{ date }}-*  
