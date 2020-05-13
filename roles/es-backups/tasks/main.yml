@@ -35,5 +35,5 @@
     group: root
     mode: 0555
   with_items:
-    - 20-backup-elasticsearch
-    - 21-prune-elasticsearch-backups
+    - 200-backup-elasticsearch-manuel
+    - 210-prune-elasticsearch-backups-manuel
