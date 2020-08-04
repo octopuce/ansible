@@ -37,14 +37,14 @@
   include_tasks: certs.yml
   vars:
     fqdn: "{{ domain }}"
-  notify:
-    - restart nginx
+    notify:
+      - restart nginx
     
 - name: "include simple host task"
   include_tasks: host.yml
   loop: "{{ domain.hostnames }}"
   vars:
     host: "{{ item }}"
-  notify:
-    - restart nginx
+    notify:
+      - restart nginx
 

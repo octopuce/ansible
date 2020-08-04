@@ -42,6 +42,6 @@
   include_tasks: certs.yml
   vars:
     fqdn: "{{ host }}"
-  notify:
-    - restart nginx
+    notify:
+      - restart nginx
     
