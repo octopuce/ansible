@@ -1,0 +1,18 @@
+# Created by Ansible
+server {
+  listen 80 default_server;
+  listen [::]:80 default_server;
+  server_name _;
+
+  # Let AlternC's Apache handle letsencrypt stuff
+  location /.well-known/acme-challenge {
+    proxy_pass http://{{ alternc_apache_addr }}:{{ alternc_apache_port }};
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto https;
+  }
+
+  location / {
+     return 301 https://$host$request_uri;
+  }
+}

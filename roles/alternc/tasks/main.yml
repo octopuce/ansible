@@ -1,0 +1,4 @@
+---
+- name: Not Implemented
+  fail:
+    msg: This role as no main, we dont support alternc install yet.

@@ -1,0 +1,34 @@
+---
+- name: Fix nginx templates proxy_pass
+  lineinfile:
+    dest: /etc/alternc/templates/nginx/nginx-template.conf
+    regexp: '^(\s+proxy_pass) http'
+    backrefs: yes
+    line: '\1 http://{{ alternc_apache_addr }}:{{ alternc_apache_port }};'
+
+- name: List Apache Templates
+  command: ls /etc/alternc/templates/apache2
+  register: alternc_templates_apache2
+  changed_when: False
+  check_mode: False
+
+- name: Fix apache templates virtualhost
+  lineinfile:
+    dest: /etc/alternc/templates/apache2/{{ item }}
+    line: '<VirtualHost {{ alternc_apache_vhost_addr }}:{{ alternc_apache_port }}>'
+    regexp: '^<Virtual[Hh]ost '
+  loop: '{{ alternc_templates_apache2.stdout_lines }}'
+  when: item | regex_search('\.conf$')
+  
+- name: Fix apache templates php
+  lineinfile:
+    dest: /etc/alternc/templates/apache2/{{ item }}
+    regexp: '^(\s+)ProxyPassMatch [^ ]+ "unix:/run/php/(php[.0-9]+)-'
+    backrefs: yes
+    line: |
+      \1<FilesMatch \.php$>
+      \1  SetHandler "proxy:unix:/run/php/\2-%%LOGIN%%.sock|fcgi://localhost/"
+      \1</FilesMatch>
+  loop: '{{ alternc_templates_apache2.stdout_lines }}'
+  when: item | regex_search('^php.*\.conf$')
+
