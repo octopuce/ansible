@@ -4,7 +4,7 @@
     dest: /etc/alternc/templates/nginx/nginx-template.conf
     regexp: '^(\s+proxy_pass) http'
     backrefs: yes
-    line: '\1 http://{{ alternc_apache_addr }}:{{ alternc_apache_port }};'
+    line: '\1 http://{{ alternc_apache_host }}:{{ alternc_apache_port }};'
 
 - name: List Apache Templates
   command: ls /etc/alternc/templates/apache2
@@ -15,7 +15,7 @@
 - name: Fix apache templates virtualhost
   lineinfile:
     dest: /etc/alternc/templates/apache2/{{ item }}
-    line: '<VirtualHost {{ alternc_apache_vhost_addr }}:{{ alternc_apache_port }}>'
+    line: '<VirtualHost {{ alternc_apache_addr }}:{{ alternc_apache_port }}>'
     regexp: '^<Virtual[Hh]ost '
   loop: '{{ alternc_templates_apache2.stdout_lines }}'
   when: item | regex_search('\.conf$')

@@ -14,9 +14,12 @@ Apache2.
 ## Configuration / Variables
 
 - `alternc_apache_addr`: The listen address of the apache
-  service. Defaults to `0.0.0.0`.
+  service. Defaults to `*`.
 - `alternc_apache_port`: The listen port of the apache
   service. Defaults to `80`.
+- `alternc_apache_host`: The address nginx will proxy requests to.
+  Defaults to `127.0.0.1` if `alternc_apache_addr` is `*`. Other wise,
+  it copies the value of `alternc_apache_addr`.
 
 Those variables will affect the `proxy_pass` directive in nginx config
 and templates, along with the `<VirtualHost>` directive in Apache

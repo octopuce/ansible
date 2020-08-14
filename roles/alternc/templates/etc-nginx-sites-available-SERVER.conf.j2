@@ -13,7 +13,7 @@ server {
   server_name {{ inventory_hostname }};
 
   location / {
-    proxy_pass http://{{ alternc_apache_addr }}:{{ alternc_apache_port }};
+    proxy_pass http://{{ alternc_apache_host }}:{{ alternc_apache_port }};
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header X-Forwarded-Proto https;
