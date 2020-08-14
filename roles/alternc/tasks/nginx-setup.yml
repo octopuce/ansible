@@ -1,0 +1,21 @@
+---
+- name: Create Panel vhost
+  template:
+    src: etc-nginx-sites-available-SERVER.conf.j2
+    dest: /etc/nginx/sites-available/{{ inventory_hostname }}.conf
+    mode: 0444
+  notify: nginx reload
+
+- name: Enable Panel vhost
+  file:
+    state: link
+    dest: /etc/nginx/sites-enabled/{{ inventory_hostname }}.conf
+    src: ../sites-available/{{ inventory_hostname }}.conf
+  notify: nginx reload
+
+- name: Add unconditional 80->443 redirection
+  template:
+    src: etc-nginx-conf.d-redir-80-to-443.conf.j2
+    dest: /etc/nginx/conf.d/redir-80-to-443.conf
+    mode: 0444
+  notify: nginx reload

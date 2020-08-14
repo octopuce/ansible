@@ -1,0 +1,5 @@
+---
+alternc_apache_addr: 0.0.0.0
+alternc_apache_port: 80
+alternc_apache_vhost_addr: >-
+  {{ '*' if alternc_apache_addr == '0.0.0.0' else alternc_apache_addr }}
