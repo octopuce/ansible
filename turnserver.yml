@@ -1,0 +1,10 @@
+---
+- hosts: all
+
+  vars:
+    coturn_listen: '{{ ansible_default_ipv4.address }}'
+    coturn_realm: '{{ inventory_hostname }}'
+
+  tasks:
+    - import_role:
+        name: turnserver

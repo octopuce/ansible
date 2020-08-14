@@ -1,0 +1,33 @@
+---
+- name: Check Variables
+  when: coturn_secret is not defined
+  fail:
+    msg: >-
+      coturn_secret is not defined. Please add it to your host_vars or
+      on the command line with -e coturn_server=<value>
+
+- name: coturn | Install package
+  apt:
+    name: coturn
+    state: present
+
+- name: coturn | Enable Service
+  lineinfile:
+    dest: /etc/default/coturn
+    regexp: '^#?TURNSERVER_ENABLED='
+    line: TURNSERVER_ENABLED=1
+  notify: restart coturn
+
+- name: coturn | Template configuration
+  template:
+    src: etc-turnserver.conf.j2
+    dest: /etc/turnserver.conf
+    mode: 0444
+  notify: restart coturn
+
+- name: coturn | Create Cron to ensure service is running
+  cron:
+    user: root
+    minute: '*/5'
+    name: Ensure coturn is running
+    job: '/etc/init.d/coturn start >/dev/null'

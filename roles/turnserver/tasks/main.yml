@@ -1,0 +1,6 @@
+---
+# Sanity checks
+- import_tasks: prerequisites.yml
+
+# We only support coTURN for now
+- import_tasks: coturn.yml
