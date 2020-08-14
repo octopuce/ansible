@@ -1,0 +1,14 @@
+# Ansible Generated
+# Based on https://nextcloud-talk.readthedocs.io/en/latest/TURN/
+listening-ip={{ coturn_listen }}
+listening-port=3478
+fingerprint
+lt-cred-mech
+use-auth-secret
+static-auth-secret={{ coturn_secret }}
+realm={{ coturn_realm }}
+total-quota=100
+bps-capacity=0
+stale-nonce
+no-loopback-peers
+no-multicast-peers

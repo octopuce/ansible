@@ -1,0 +1,11 @@
+---
+# This role has only been tested on Debian Stretch
+- name: Check Distribution
+  fail:
+    msg: Only Debian has been tested
+  when: ansible_distribution != 'Debian'
+
+- name: Check Distribution Release
+  fail:
+    msg: Only Debian Stretch (9) has been tested
+  when: ansible_distribution_release not in [ 'stretch' ]
