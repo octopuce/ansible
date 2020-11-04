@@ -16,7 +16,7 @@ def debug(msg):
     if DEBUG:
         sys.stderr.write('DEBUG: %s\n' % msg)
 
-base_url = 'http://localhost:9200/_snapshot/es_backups'
+base_url = 'http://localhost:9200/_snapshot/es-backups'
 purge_days = 7
 keep_backups = 5
 
