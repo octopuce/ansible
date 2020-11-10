@@ -36,10 +36,15 @@
   when: domain.generate_certs == True
   include_tasks: certs.yml
   vars:
-    fqdn: "{{ domain }}"
+    fqdn: { name: "" }
     notify:
       - restart nginx
     
+- name: "Create root directory for SSL certs"
+  file:
+    state: directory
+    path: '/var/www/letsencrypt/.well-known/acme-challenge/'
+
 - name: "include simple host task"
   include_tasks: host.yml
   loop: "{{ domain.hostnames }}"
