@@ -34,9 +34,8 @@
     
 - name: "Generate certs if asked to"
   when: domain.generate_certs == True
-  include_tasks: certs.yml
+  include_tasks: domain_certs.yml
   vars:
-    fqdn: { name: "" }
     notify:
       - restart nginx
     

@@ -1,0 +1,22 @@
+---
+
+- name: "Install python-apt package for loading facts"
+  shell: '/usr/bin/apt install -y python-apt'
+
+- name: "Load packages facts"
+  package_facts:
+    manager: apt
+
+- name: "Ensure Nginx has restarted"
+  service:
+    name: 'nginx'
+    state: restarted
+
+- name: "Certbot go get SSL certs for {{ domain.name }}"
+  shell: /usr/bin/letsencrypt certonly --non-interactive --webroot --keep --agree-tos -w /var/www/letsencrypt/ --email domaines@octopuce.fr --expand -d {{ domain.name }}
+
+- name: "Certs can now be activated"
+  replace:
+    path: /etc/nginx/sites-available/{{ domain.name }}.conf
+    regexp: '(\s*)#ssl_certificate(.*)'
+    replace: '\1ssl_certificate\2'
