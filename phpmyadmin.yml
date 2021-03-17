@@ -1,0 +1,13 @@
+---
+- hosts: all
+  remote_user: root
+
+  vars:
+    github_repository: phpmyadmin/phpmyadmin
+    github_release: lastest
+    github_path: /opt/phpmyadmin
+
+  tasks:
+    - import_role:
+        name: github
+        tasks_from: tarball

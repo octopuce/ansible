@@ -1,0 +1,4 @@
+---
+- fail:
+    msg: This role in an helper and should not be included directly
+  tags: always

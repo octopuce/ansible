@@ -1,0 +1,6 @@
+---
+github_state_dir: /var/cache/ansible-github
+
+# Derived variables
+_github_api_get_releases: https://api.github.com/repos/{{ github_repository }}/releases
+_github_state_file: '{{ github_state_dir }}/{{ github_repository | replace("/", "__") }}.releases'

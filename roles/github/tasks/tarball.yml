@@ -1,0 +1,76 @@
+---
+- debug:
+    msg: >-
+      Fetching GitHub project '{{ github_repository }}'
+
+- name: Ensure state directory exists
+  file:
+    state: directory
+    path: '{{ github_state_dir }}'
+    mode: 0755
+
+- name: Ensure dest directory exists
+  file:
+    state: directory
+    path: '{{ github_path }}'
+    mode: 0755
+
+- name: Fetch Releases List
+  uri: url={{ _github_api_get_releases }}
+  register: github_releases
+  check_mode: no
+
+- name: Register latest version
+  set_fact:
+    github_latest_release: '{{ github_releases.json[0].tag_name }}'
+
+- name: Save latest version
+  copy:
+    dest: '{{ _github_state_file }}'
+    mode: 0444
+    content: >
+      {{ github_latest_release }}
+  register: github_release_new
+
+- block:
+    - name: Register tarball pathname
+      set_fact:
+        github_tarball_pathname: /var/tmp/ansible-github-{{ github_latest_release }}.tar.gz
+
+    - debug:
+        msg: >-
+          Found new release: '{{ github_latest_release }}'. Upgrading.
+          Tarball will be downloaded as '{{ github_tarball_pathname }}'.
+
+    - debug:
+        verbosity: 1
+        msg: >-
+          '{{ github_releases.json[0] | pprint }}'
+
+    - name: Download Assets Tarball
+      get_url:
+        url: '{{ asset.browser_download_url }}'
+        dest: '{{ github_tarball_pathname }}'
+      with_items: '{{ github_releases.json[0].assets }}'
+      when:
+        - github_releases.json[0].assets | length > 0
+        - asset.browser_download_url | search('\\.tgz$')
+      loop_control:
+        loop_var: asset
+
+    - name: Download Tarball
+      get_url:
+        url: '{{ github_releases.json[0].tarball_url }}'
+        dest: '{{ github_tarball_pathname }}'
+      when: github_releases.json[0].assets | length == 0
+
+    - name: Unpack Tarball
+      command: >-
+        tar -xz
+        -f {{ github_tarball_pathname }}
+        --strip-components 1
+        -C {{ github_path }}
+      args:
+        warn: false
+
+  when: github_release_new is changed
